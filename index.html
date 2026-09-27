@@ -47,7 +47,7 @@ main{flex:1;min-width:0;padding:16px 16px 40px}
   .logo small{display:none}
   nav{position:fixed;bottom:0;left:0;right:0;top:auto;width:auto;height:auto;z-index:20;display:flex;
     padding:4px 4px calc(4px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
-  nav a{flex:1;flex-direction:column;gap:0;font-size:11px;padding:4px 0;margin:0;position:relative}
+  nav a{flex:1;min-width:0;flex-direction:column;gap:0;font-size:11px;padding:4px 0;margin:0;position:relative;white-space:nowrap}
   nav a i{font-size:18px}
   nav a b{position:absolute;top:0;right:calc(50% - 20px);margin:0}
   nav a.nav-set{display:none}
@@ -77,7 +77,9 @@ h3{font-size:15px;margin:0 0 10px}
 .btn.pri:hover{opacity:.9;color:#fff}
 .btn.danger{color:var(--bad)}
 .btn.sm{height:26px;padding:0 10px;font-size:12px}
-select.flt{height:32px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:0 8px}
+.flt{height:32px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:0 8px;color:var(--text)}
+h2 .btn,h2 .flt{font-size:14px;font-weight:400}
+h2 .btn.pri{font-weight:600}
 .tabs{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:2px}
 .tabs button{border:0;background:none;padding:4px 12px;border-radius:6px;cursor:pointer}
 .tabs button.on{background:var(--pri-weak);color:var(--pri);font-weight:600}
@@ -126,6 +128,18 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 .menu{display:grid;gap:8px}
 .menu button{text-align:left;height:auto;padding:12px 14px}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:20px;z-index:60;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 6px 0 12px;border-radius:18px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+.chip .small{color:var(--muted)}
+.chip i{font-style:normal;color:var(--muted);padding:0 6px;border-radius:50%}
+.chip i:hover{color:var(--pri)}
+.chip.on{background:var(--ok-weak);border-color:var(--ok);color:var(--ok);font-weight:600}
+@media print{
+  header,nav,.no-print,.toast{display:none!important}
+  body{background:#fff;color:#000}
+  main{padding:0}
+  .card{box-shadow:none;border-color:#ccc;break-inside:avoid}
+}
 kbd{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--muted)}
 </style>
 </head>
@@ -133,7 +147,7 @@ kbd{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;
 <header>
   <div class="logo">🏗 施工<span>管理</span> <small class="muted">· 方便 简约 智能</small></div>
   <div class="search">
-    <input id="q" placeholder="搜索项目 / 日志 / 问题 / 材料   Ctrl+K" autocomplete="off">
+    <input id="q" placeholder="搜索项目 / 日志 / 问题 / 材料 / 人员   Ctrl+K" autocomplete="off">
     <div class="results" id="results" hidden></div>
   </div>
   <a class="icon-btn m-only" href="#settings" title="数据管理" style="display:none;align-items:center;justify-content:center;text-decoration:none;color:inherit">⚙</a>
@@ -163,17 +177,28 @@ function load() {
   return seed();
 }
 function normalize(d) {
-  return { projects: d.projects || [], logs: d.logs || [], issues: d.issues || [], materials: d.materials || [] };
+  return { projects: d.projects || [], logs: d.logs || [], issues: d.issues || [], materials: d.materials || [],
+    people: d.people || [], att: d.att || {} };
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { toast('浏览器禁止本地存储，数据仅在本次打开有效'); } }
 
 function seed() {
   const p1 = uid(), p2 = uid() + 'b', p3 = uid() + 'c';
+  const people = [
+    ['刘建国', '钢筋班', '钢筋工'], ['陈志强', '钢筋班', '钢筋工'], ['杨海', '木工班', '木工'], ['黄明', '木工班', '木工'],
+    ['周勇', '混凝土班', '混凝土工'], ['吴军', '混凝土班', '混凝土工'], ['孙电工', '水电班', '电工'],
+  ].map(([name, team, role], i) => ({ id: uid() + i, projectId: p1, name, team, role, phone: '' }))
+    .concat([['郑涛', '管道班', '管道工'], ['冯磊', '管道班', '管道工'], ['钱班长', '管道班', '班长']]
+      .map(([name, team, role], i) => ({ id: uid() + 'x' + i, projectId: p2, name, team, role, phone: '' })));
+  const att = { [addDays(-1)]: people.map(x => x.id), [today()]: people.slice(0, 5).map(x => x.id) };
   return {
     projects: [
-      { id: p1, name: '城南安置房一期', manager: '张工', start: addDays(-120), end: addDays(60), progress: 55, status: '在建', note: '6 栋住宅，框剪结构' },
-      { id: p2, name: '滨江路市政改造', manager: '李工', start: addDays(-40), end: addDays(80), progress: 22, status: '在建', note: '道路、管网及绿化' },
-      { id: p3, name: '科创园 3# 楼', manager: '王工', start: addDays(-200), end: addDays(-5), progress: 92, status: '在建', note: '装饰装修收尾' },
+      { id: p1, name: '城南安置房一期', manager: '张工', start: addDays(-120), end: addDays(60), progress: 55, status: '在建', note: '6 栋住宅，框剪结构',
+        history: [{ date: addDays(-40), progress: 38 }, { date: addDays(-20), progress: 47 }, { date: addDays(-1), progress: 55 }] },
+      { id: p2, name: '滨江路市政改造', manager: '李工', start: addDays(-40), end: addDays(80), progress: 22, status: '在建', note: '道路、管网及绿化',
+        history: [{ date: addDays(-25), progress: 8 }, { date: addDays(-1), progress: 22 }] },
+      { id: p3, name: '科创园 3# 楼', manager: '王工', start: addDays(-200), end: addDays(-5), progress: 92, status: '在建', note: '装饰装修收尾',
+        history: [{ date: addDays(-30), progress: 84 }, { date: addDays(-2), progress: 92 }] },
     ],
     logs: [
       { id: uid(), projectId: p1, date: addDays(-1), weather: '晴', workers: 86, content: '【施工内容】3# 楼 12 层墙柱钢筋绑扎、模板支设；5# 楼 8 层顶板混凝土浇筑。\n【安全质量】脚手架例行检查，未发现隐患。' },
@@ -181,9 +206,9 @@ function seed() {
       { id: uid(), projectId: p3, date: today(), weather: '晴', workers: 25, content: '【施工内容】5～8 层吊顶及墙面乳胶漆施工。' },
     ],
     issues: [
-      { id: uid(), projectId: p1, type: '安全', level: '高', desc: '5# 楼临边防护栏杆缺失', owner: '赵班长', deadline: addDays(-2), status: '待整改' },
-      { id: uid(), projectId: p2, type: '质量', level: '中', desc: '管道基础砂垫层厚度不足', owner: '钱班长', deadline: addDays(2), status: '待整改' },
-      { id: uid(), projectId: p1, type: '安全', level: '低', desc: '配电箱未上锁', owner: '孙电工', deadline: addDays(-6), status: '已整改' },
+      { id: uid(), projectId: p1, type: '安全', level: '高', desc: '5# 楼临边防护栏杆缺失', owner: '赵班长', deadline: addDays(-2), status: '待整改', created: addDays(-3) },
+      { id: uid(), projectId: p2, type: '质量', level: '中', desc: '管道基础砂垫层厚度不足', owner: '钱班长', deadline: addDays(2), status: '待整改', created: addDays(-1) },
+      { id: uid(), projectId: p1, type: '安全', level: '低', desc: '配电箱未上锁', owner: '孙电工', deadline: addDays(-6), status: '已整改', created: addDays(-8), fixed: addDays(-6) },
     ],
     materials: [
       { id: uid(), projectId: p1, name: '螺纹钢 HRB400', unit: '吨', stock: 12, min: 20, updated: addDays(-1) },
@@ -191,6 +216,7 @@ function seed() {
       { id: uid(), projectId: p2, name: 'DN600 雨水管', unit: '米', stock: 40, min: 60, updated: addDays(-3) },
       { id: uid(), projectId: p3, name: '乳胶漆', unit: '桶', stock: 65, min: 30, updated: today() },
     ],
+    people, att,
   };
 }
 
@@ -213,6 +239,39 @@ function health(p) {
   const lag = planPct(p) - p.progress;
   return lag >= 15 ? 'bad' : lag >= 5 ? 'warn' : '';
 }
+// 预计完工：按近期（约 45 天内）进度速度外推；记录不足时按开工以来的平均速度
+function forecast(p) {
+  if (p.status === '已完工' || p.progress >= 100 || !p.start) return null;
+  const t = today();
+  const h = (p.history || []).filter(x => x.date <= t && diff(x.date, t) <= 45).sort((a, b) => a.date.localeCompare(b.date));
+  let base = h[0];
+  if (!base || diff(base.date, t) < 7) base = { date: p.start, progress: 0 };
+  const days = diff(base.date, t), gain = p.progress - base.progress;
+  if (days <= 0) return null;
+  if (gain <= 0) return { stalled: true };
+  const date = addDays(Math.ceil((100 - p.progress) / (gain / days)));
+  return { date, late: p.end ? diff(p.end, date) : 0 };
+}
+const fcText = p => {
+  const f = forecast(p); if (!f) return '';
+  if (f.stalled) return '近期进度无变化';
+  return `预计 ${f.date} 完工` + (f.late > 0 ? `，比计划晚 ${f.late} 天` : f.late < 0 ? `，比计划早 ${-f.late} 天` : '');
+};
+function recordProgress(p) {
+  const h = p.history || (p.history = []), last = h[h.length - 1];
+  if (last && last.date === today()) last.progress = p.progress;
+  else if (!last || last.progress !== p.progress) h.push({ date: today(), progress: p.progress });
+}
+// 考勤：db.att = { 日期: [人员 id] }
+const attIds = date => db.att[date] || [];
+const attCount = (pid, date) => { const ids = attIds(date); return db.people.filter(x => x.projectId === pid && ids.includes(x.id)).length; };
+function attSummary(pid, date) {
+  const ids = attIds(date), teams = {};
+  db.people.filter(x => x.projectId === pid && ids.includes(x.id)).forEach(x => { const k = x.team || '其他'; teams[k] = (teams[k] || 0) + 1; });
+  const n = Object.values(teams).reduce((a, b) => a + b, 0);
+  return n ? `出勤 ${n} 人（${Object.entries(teams).map(([k, v]) => k + ' ' + v).join('、')}）` : '';
+}
+
 const isOverdue = i => i.status !== '已整改' && i.deadline && i.deadline < today();
 const isLow = m => Number(m.stock) <= Number(m.min);
 
@@ -222,7 +281,8 @@ function alerts() {
     const plan = planPct(p);
     if (p.status === '停工') out.push({ lv: 'warn', text: `${p.name} 处于停工状态`, go: 'projects' });
     else if (t > p.end) out.push({ lv: 'bad', text: `${p.name} 已超出计划竣工日 ${diff(p.end, t)} 天，实际进度 ${p.progress}%`, go: 'projects' });
-    else if (plan - p.progress >= 5) out.push({ lv: plan - p.progress >= 15 ? 'bad' : 'warn', text: `${p.name} 进度滞后 ${plan - p.progress}%（计划 ${plan}% / 实际 ${p.progress}%）`, go: 'projects' });
+    else if (plan - p.progress >= 5) out.push({ lv: plan - p.progress >= 15 ? 'bad' : 'warn', text: `${p.name} 进度滞后 ${plan - p.progress}%（计划 ${plan}% / 实际 ${p.progress}%）${fcText(p) ? '，' + fcText(p) : ''}`, go: 'projects' });
+    else { const f = forecast(p); if (f && f.late > 7) out.push({ lv: 'warn', text: `${p.name} 按近期速度${fcText(p)}，建议加快进度`, go: 'projects' }); }
     if (p.status !== '停工' && !db.logs.some(l => l.projectId === p.id && l.date === t))
       out.push({ lv: 'info', text: `${p.name} 今日还没写施工日志`, act: () => editLog(null, { projectId: p.id }), btn: '去填写' });
   });
@@ -245,9 +305,11 @@ function draftLog(pid) {
   const low = db.materials.filter(m => m.projectId === pid && isLow(m));
   const lines = [];
   lines.push('【施工内容】' + (lastWork ? `（续昨日）${lastWork}` : '（填写今日施工部位及内容）'));
+  const as = attSummary(pid, today());
+  if (as) lines.push('【人员】' + as);
   lines.push('【安全质量】' + (open.length ? `待整改 ${open.length} 项：` + open.map(i => `${i.desc}（${i.owner || '待指定'}，${isOverdue(i) ? '已逾期' : '期限 ' + (i.deadline || '-')}）`).join('；') : '现场巡查未发现新问题。'));
   if (low.length) lines.push('【材料】库存预警：' + low.map(m => `${m.name} 剩 ${m.stock}${m.unit}`).join('；') + '，需及时进场。');
-  lines.push(`【进度】形象进度 ${p.progress}%，计划进度 ${planPct(p)}%。`);
+  lines.push(`【进度】形象进度 ${p.progress}%，计划进度 ${planPct(p)}%${fcText(p) ? '，' + fcText(p) : ''}。`);
   return lines.join('\n');
 }
 
@@ -258,9 +320,11 @@ const VIEWS = {
   logs:      { name: '日志',   icon: '✎', render: viewLogs },
   issues:    { name: '安全质量', icon: '⚠', render: viewIssues },
   materials: { name: '材料',   icon: '▤', render: viewMaterials },
+  people:    { name: '考勤',   icon: '☺', render: viewPeople },
+  report:    { name: '报表',   icon: '▥', render: viewReport },
   settings:  { name: '数据',   icon: '⚙', render: viewSettings },
 };
-const state = { pid: '', issueTab: '待整改' };
+const state = { pid: '', issueTab: '待整改', attDate: today(), range: 'week' };
 const view = () => VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'home';
 const go = v => { if (location.hash.slice(1) === v) render(); else location.hash = v; };
 
@@ -319,7 +383,7 @@ function viewHome() {
       ${act.length ? act.map(p => `<div class="item" style="cursor:pointer" data-act="openP" data-id="${p.id}">
         <div class="row"><span class="title">${esc(p.name)}</span><span class="sp"></span><b>${p.progress}%</b></div>
         ${bar(p)}
-        <div class="muted small">${remain(p)}</div></div>`).join('') : '<div class="empty">暂无在建项目</div>'}
+        <div class="muted small">${remain(p)}${fcText(p) ? ' · ' + fcText(p) : ''}</div></div>`).join('') : '<div class="empty">暂无在建项目</div>'}
     </div>
   </div>`;
 }
@@ -344,6 +408,7 @@ function viewProjects() {
         ${h === 'bad' ? '<span class="tag bad">严重滞后</span>' : h === 'warn' ? '<span class="tag warn">轻微滞后</span>' : ''}
         <span class="sp"></span><button class="btn sm" data-act="editP" data-id="${p.id}">编辑</button></div>
       <div class="muted small">${esc(p.start)} ~ ${esc(p.end)} · ${remain(p)}</div>
+      ${fcText(p) ? `<div class="small" style="margin-top:4px;color:${(forecast(p) || {}).late > 7 || forecast(p)?.stalled ? 'var(--warn)' : 'var(--muted)'}">🤖 ${fcText(p)}</div>` : ''}
       ${p.note ? `<div class="small" style="margin-top:4px">${esc(p.note)}</div>` : ''}
       <div class="row" style="margin-top:8px"><span class="small muted">拖动更新进度</span><span class="sp"></span><b id="pv-${p.id}">${p.progress}%</b></div>
       <input type="range" min="0" max="100" step="1" value="${p.progress}" data-act="prog" data-id="${p.id}" oninput="document.getElementById('pv-${p.id}').textContent=this.value+'%'">
@@ -361,7 +426,7 @@ ACTS.prog = (id, el) => {
   const p = getP(id); p.progress = Number(el.value);
   if (p.progress >= 100 && p.status !== '已完工') { p.status = '已完工'; toast('进度 100%，已自动标记为已完工'); }
   else if (p.progress < 100 && p.status === '已完工') p.status = '在建';
-  save(); render();
+  recordProgress(p); save(); render();
 };
 
 function viewLogs() {
@@ -422,6 +487,122 @@ ACTS.newM = () => editMaterial(null, { projectId: state.pid });
 ACTS.editM = id => editMaterial(db.materials.find(m => m.id === id));
 ACTS.inM = id => stockForm(db.materials.find(m => m.id === id), 1);
 ACTS.outM = id => stockForm(db.materials.find(m => m.id === id), -1);
+
+function viewPeople() {
+  if (!state.pid || !getP(state.pid)) state.pid = active()[0]?.id || db.projects[0]?.id || '';
+  const pid = state.pid, date = state.attDate, ids = attIds(date);
+  const list = db.people.filter(x => x.projectId === pid);
+  const here = list.filter(x => ids.includes(x.id)).length;
+  const teams = {};
+  list.forEach(x => (teams[x.team || '其他'] = teams[x.team || '其他'] || []).push(x));
+  const log = db.logs.find(l => l.projectId === pid && l.date === date);
+  return `<h2>人员考勤<span class="sp"></span>
+    <select class="flt" data-act="pid">${db.projects.map(p => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+    <input type="date" class="flt" value="${date}" max="${today()}" data-act="attDate">
+    <button class="btn pri" data-act="newPer">＋ 添加人员</button></h2>
+  ${!pid ? '<div class="card empty">请先新建项目</div>' : `
+  <div class="card">
+    <div class="row"><span style="font-size:22px;font-weight:700">${here}<span class="muted" style="font-size:15px"> / ${list.length} 人</span></span>
+      <span class="muted small">${date === today() ? '今日' : esc(date)} 出勤 · 点名字即可签到/取消</span><span class="sp"></span>
+      ${list.length ? `<button class="btn" data-act="attAll">${here === list.length ? '全部取消' : '全部出勤'}</button>` : ''}
+      ${list.length ? `<button class="btn" data-act="attCopy" title="按前一天的出勤名单签到">同前一天</button>` : ''}</div>
+    ${log && Number(log.workers) !== here && here ? `<div class="small" style="margin-top:6px;color:var(--warn)">当天日志记录现场 ${Number(log.workers) || 0} 人，与考勤 ${here} 人不一致 <button class="btn sm" data-act="attSyncLog" data-id="${log.id}">同步到日志</button></div>` : ''}
+  </div>
+  ${list.length ? Object.entries(teams).map(([t, arr]) => `<div class="card">
+    <h3>${esc(t)} <span class="muted small">${arr.filter(x => ids.includes(x.id)).length}/${arr.length}</span></h3>
+    <div class="chips">${arr.map(x => `<button class="chip ${ids.includes(x.id) ? 'on' : ''}" data-act="att" data-id="${x.id}">
+      ${ids.includes(x.id) ? '✓ ' : ''}${esc(x.name)}<span class="small">${esc(x.role || '')}</span><i data-act="editPer" data-id="${x.id}" title="编辑">✎</i></button>`).join('')}</div>
+  </div>`).join('') : '<div class="card empty">该项目还没有人员，点「添加人员」录入班组成员</div>'}`}`;
+}
+ACTS.attDate = (_, el) => { state.attDate = el.value || today(); render(); };
+ACTS.att = id => {
+  const arr = db.att[state.attDate] || (db.att[state.attDate] = []), i = arr.indexOf(id);
+  i >= 0 ? arr.splice(i, 1) : arr.push(id); save(); render();
+};
+ACTS.attAll = () => {
+  const list = db.people.filter(x => x.projectId === state.pid).map(x => x.id);
+  const arr = db.att[state.attDate] || [], all = list.every(id => arr.includes(id));
+  db.att[state.attDate] = all ? arr.filter(id => !list.includes(id)) : [...new Set([...arr, ...list])];
+  save(); render();
+};
+ACTS.attCopy = () => {
+  const list = db.people.filter(x => x.projectId === state.pid).map(x => x.id);
+  const prev = attIds(addDays(-1, state.attDate)).filter(id => list.includes(id));
+  if (!prev.length) return toast('前一天没有出勤记录');
+  db.att[state.attDate] = [...new Set([...attIds(state.attDate).filter(id => !list.includes(id)), ...prev])];
+  save(); render(); toast(`已按前一天签到 ${prev.length} 人`);
+};
+ACTS.attSyncLog = id => { const l = db.logs.find(x => x.id === id); l.workers = attCount(l.projectId, l.date); save(); render(); toast('已同步到日志'); };
+ACTS.newPer = () => editPerson();
+ACTS.editPer = id => editPerson(db.people.find(x => x.id === id));
+
+/* ---------- 报表 ---------- */
+function rangeOf(r) {
+  const t = today(), wd = (new Date(t + 'T00:00').getDay() + 6) % 7;
+  if (r === 'week') return [addDays(-wd), t, '本周'];
+  if (r === 'lastweek') return [addDays(-wd - 7), addDays(-wd - 1), '上周'];
+  const first = t.slice(0, 8) + '01';
+  if (r === 'month') return [first, t, '本月'];
+  const end = addDays(-1, first);
+  return [end.slice(0, 8) + '01', end, '上月'];
+}
+function progAt(p, date) {
+  const h = (p.history || []).filter(x => x.date <= date);
+  if (h.length) return h.sort((a, b) => a.date.localeCompare(b.date))[h.length - 1].progress;
+  if (date < p.start) return 0;
+  return (p.history || []).length ? p.history[0].progress : p.progress;
+}
+function reportText(p, from, to, label) {
+  const inR = d => d && d >= from && d <= to;
+  const logs = db.logs.filter(l => l.projectId === p.id && inR(l.date)).sort((a, b) => a.date.localeCompare(b.date));
+  const avg = logs.length ? Math.round(logs.reduce((a, l) => a + (Number(l.workers) || 0), 0) / logs.length) : 0;
+  const bad = logs.filter(l => /雨|雪|大风|高温/.test(l.weather)).length;
+  let manDays = 0;
+  for (let d = from; d <= to; d = addDays(1, d)) manDays += attCount(p.id, d);
+  const iss = db.issues.filter(i => i.projectId === p.id);
+  const added = iss.filter(i => inR(i.created)).length, fixed = iss.filter(i => inR(i.fixed)).length;
+  const open = iss.filter(i => i.status !== '已整改'), over = open.filter(isOverdue);
+  const low = db.materials.filter(m => m.projectId === p.id && isLow(m));
+  const p0 = progAt(p, addDays(-1, from)), p1 = to >= today() ? p.progress : progAt(p, to);
+  const L = [];
+  L.push(`【${p.name}】${label}工作报告（${from} ~ ${to}）`);
+  L.push(`一、进度：${p0}% → ${p1}%（${label}完成 ${Math.max(0, p1 - p0)}%），计划进度 ${planPct(p)}%${fcText(p) ? '；' + fcText(p) : ''}。`);
+  L.push(`二、施工：填写日志 ${logs.length} 篇，平均现场 ${avg} 人${manDays ? `，考勤合计 ${manDays} 工日` : ''}${bad ? `，不利天气 ${bad} 天` : ''}。`);
+  logs.forEach(l => { const w = (l.content.match(/【施工内容】([^\n]*)/) || [, l.content.split('\n')[0]])[1]; L.push(`  ${l.date.slice(5)} ${w}`); });
+  L.push(`三、安全质量：新增问题 ${added} 项，完成整改 ${fixed} 项，尚待整改 ${open.length} 项${over.length ? `（其中逾期 ${over.length} 项）` : ''}。`);
+  open.forEach(i => L.push(`  · [${i.type}/${i.level}] ${i.desc} — ${i.owner || '待指定'}，${isOverdue(i) ? '已逾期' : '期限 ' + (i.deadline || '-')}`));
+  L.push(`四、材料：${low.length ? '库存不足 ' + low.map(m => `${m.name}（剩 ${m.stock}${m.unit}）`).join('、') + '，请安排进场。' : '库存正常。'}`);
+  const todo = [];
+  if (over.length) todo.push('督促逾期问题整改闭环');
+  if (planPct(p) - p.progress >= 5) todo.push('分析滞后原因，增加作业面或人员');
+  if (low.length) todo.push('落实短缺材料采购进场');
+  if (todo.length) L.push(`五、下阶段重点：${todo.join('；')}。`);
+  return L.join('\n');
+}
+function viewReport() {
+  const [from, to, label] = rangeOf(state.range);
+  const ps = db.projects.filter(p => !state.pid || p.id === state.pid);
+  const tabs = [['week', '本周'], ['lastweek', '上周'], ['month', '本月'], ['lastmonth', '上月']];
+  return `<h2>自动报表<span class="sp"></span><span class="no-print row">${projectFilter()}
+    <button class="btn" data-act="repCopy">复制文字</button><button class="btn pri" data-act="repPrint">打印 / 存 PDF</button></span></h2>
+  <div class="tabs no-print" style="margin-bottom:12px">${tabs.map(([k, t]) => `<button class="${k === state.range ? 'on' : ''}" data-act="range" data-id="${k}">${t}</button>`).join('')}</div>
+  <p class="muted small no-print">根据日志、考勤、问题和材料数据自动汇总，可直接复制发到微信群，或打印存档。</p>
+  ${ps.length ? ps.map(p => `<div class="card"><div class="pre" style="margin:0">${esc(reportText(p, from, to, label))}</div></div>`).join('') : '<div class="card empty">暂无项目</div>'}`;
+}
+ACTS.range = k => { state.range = k; render(); };
+ACTS.repPrint = () => window.print();
+ACTS.repCopy = () => {
+  const [from, to, label] = rangeOf(state.range);
+  copyText(db.projects.filter(p => !state.pid || p.id === state.pid).map(p => reportText(p, from, to, label)).join('\n\n'));
+};
+function copyText(t) {
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('已复制，可直接粘贴到微信'); } catch (e) { toast('复制失败，请手动选择文字复制'); }
+    ta.remove();
+  };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('已复制，可直接粘贴到微信'), fallback); else fallback();
+}
 
 function viewSettings() {
   return `<h2>数据管理</h2>
@@ -496,7 +677,8 @@ function closeModal() { $('#modal').hidden = true; $('#modal').innerHTML = ''; }
 $('#modal').addEventListener('mousedown', e => { if (e.target.id === 'modal') closeModal(); });
 
 function upsert(list, item, data) {
-  if (item) Object.assign(item, data); else list.push({ id: uid(), ...data });
+  if (item) return Object.assign(item, data);
+  const x = { id: uid(), ...data }; list.push(x); return x;
 }
 const needProject = () => { if (!db.projects.length) { toast('请先新建一个项目'); editProject(); return true; } };
 
@@ -516,11 +698,11 @@ function editProject(p) {
       if (d.end < d.start) { toast('竣工日期不能早于开工日期'); return false; }
       d.progress = clamp(d.progress, 0, 100);
       if (d.progress >= 100) d.status = '已完工';
-      upsert(db.projects, p, d);
+      recordProgress(upsert(db.projects, p, d));
     },
     onDelete: p && (() => {
       db.projects = db.projects.filter(x => x !== p);
-      ['logs', 'issues', 'materials'].forEach(k => db[k] = db[k].filter(x => x.projectId !== p.id));
+      ['logs', 'issues', 'materials', 'people'].forEach(k => db[k] = db[k].filter(x => x.projectId !== p.id));
       if (state.pid === p.id) state.pid = '';
     }),
   });
@@ -528,14 +710,15 @@ function editProject(p) {
 
 function editLog(l, preset = {}) {
   if (needProject()) return;
-  const data = l || { date: today(), weather: '晴', workers: '', ...preset, projectId: defPid(preset.projectId) };
+  const data = l || { date: today(), weather: '晴', ...preset, projectId: defPid(preset.projectId) };
+  if (!l && !data.workers) data.workers = attCount(data.projectId, data.date) || '';
   openForm({
     title: l ? '编辑施工日志' : '写施工日志', data,
     fields: [
       { k: 'projectId', label: '项目', type: 'select', opts: projOpts, full: 1 },
       { k: 'date', label: '日期', type: 'date', req: 1 },
       { k: 'weather', label: '天气', type: 'select', opts: ['晴', '多云', '阴', '小雨', '大雨', '雪', '大风', '高温'] },
-      { k: 'workers', label: '现场人数', type: 'number' },
+      { k: 'workers', label: '现场人数（自动取考勤）', type: 'number' },
       { k: 'content', label: '施工内容', type: 'textarea', full: 1, req: 1, tool: ' <button type="button" class="btn sm" data-draft style="float:right;margin-top:-4px">🤖 智能生成</button>', ph: '点击右上角「智能生成」，自动汇总进度、待整改问题和材料预警' },
     ],
     onSave: d => {
@@ -552,7 +735,10 @@ function editLog(l, preset = {}) {
         ta.value = draftLog(f.elements.projectId.value); ta.focus();
       };
       if (!l && !data.content) f.elements.content.value = draftLog(data.projectId);
-      f.elements.projectId.onchange = () => { if (!l) f.elements.content.value = draftLog(f.elements.projectId.value); };
+      // 切换项目/日期时，自动带出考勤人数和草稿
+      const sync = () => { if (l) return; const pid = f.elements.projectId.value; f.elements.workers.value = attCount(pid, f.elements.date.value) || f.elements.workers.value; };
+      f.elements.date.onchange = sync;
+      f.elements.projectId.onchange = () => { sync(); if (!l) f.elements.content.value = draftLog(f.elements.projectId.value); };
     },
   });
 }
@@ -573,6 +759,7 @@ function editIssue(i, preset = {}) {
     ],
     onSave: d => {
       if (d.status === '已整改' && (!i || i.status !== '已整改')) d.fixed = today();
+      if (!i) d.created = today();
       upsert(db.issues, i, d);
     },
     onDelete: i && (() => db.issues = db.issues.filter(x => x !== i)),
@@ -600,6 +787,30 @@ function editMaterial(m, preset = {}) {
   });
 }
 
+function editPerson(x) {
+  if (needProject()) return;
+  const teams = [...new Set(db.people.map(y => y.team).filter(Boolean))];
+  openForm({
+    title: x ? '编辑人员' : '添加人员',
+    data: x || { projectId: defPid(), team: teams[0] || '' },
+    fields: [
+      { k: 'projectId', label: '项目', type: 'select', opts: projOpts, full: 1 },
+      { k: 'name', label: '姓名', req: 1, ph: '可一次输入多人，用空格或逗号隔开' },
+      { k: 'team', label: '班组', ph: teams.join(' / ') || '如：钢筋班' },
+      { k: 'role', label: '工种', ph: '如：钢筋工' },
+      { k: 'phone', label: '电话', type: 'tel' },
+    ],
+    onSave: d => {
+      if (x) return void Object.assign(x, d);
+      // 批量添加：姓名用空格/逗号分隔
+      const names = d.name.split(/[\s,，、]+/).filter(Boolean);
+      names.forEach(n => db.people.push({ id: uid() + Math.random().toString(36).slice(2, 4), ...d, name: n }));
+      if (names.length > 1) toast(`已添加 ${names.length} 人`);
+    },
+    onDelete: x && (() => db.people = db.people.filter(y => y !== x)),
+  });
+}
+
 function stockForm(m, sign) {
   openForm({
     title: `${sign > 0 ? '入库' : '出库'}：${m.name}（当前 ${m.stock}${m.unit}）`,
@@ -619,9 +830,11 @@ function quickAdd() {
     <button class="btn" data-q="log">✎ 写施工日志 <span class="muted small">— 自动生成草稿</span></button>
     <button class="btn" data-q="issue">⚠ 登记安全质量问题</button>
     <button class="btn" data-q="mat">▤ 新增材料</button>
+    <button class="btn" data-q="att">☺ 今日考勤</button>
+    <button class="btn" data-q="rep">▥ 生成本周周报</button>
     <button class="btn" data-q="proj">▦ 新建项目</button></div></div>`;
   m.hidden = false;
-  const fn = { log: () => editLog(), issue: () => editIssue(), mat: () => editMaterial(), proj: () => editProject() };
+  const fn = { log: () => editLog(), issue: () => editIssue(), mat: () => editMaterial(), proj: () => editProject(), att: () => { closeModal(); state.attDate = today(); go('people'); }, rep: () => { closeModal(); state.range = 'week'; go('report'); } };
   m.querySelectorAll('[data-q]').forEach(b => b.onclick = () => fn[b.dataset.q]());
 }
 $('#add').onclick = quickAdd;
@@ -637,6 +850,7 @@ function search() {
     ...db.projects.filter(p => has(p.name, p.manager, p.note)).map(p => ({ tag: '项目', t: p.name, s: `${p.manager || ''} · ${p.progress}%`, fn: () => { state.pid = p.id; go('projects'); } })),
     ...db.issues.filter(i => has(i.desc, i.owner, i.type)).map(i => ({ tag: '问题', t: i.desc, s: `${pname(i.projectId)} · ${i.status}`, fn: () => editIssue(i) })),
     ...db.materials.filter(m => has(m.name)).map(m => ({ tag: '材料', t: m.name, s: `${pname(m.projectId)} · 库存 ${m.stock}${m.unit}`, fn: () => editMaterial(m) })),
+    ...db.people.filter(x => has(x.name, x.team, x.role, x.phone)).map(x => ({ tag: '人员', t: x.name, s: `${pname(x.projectId)} · ${x.team || ''} ${x.role || ''}`, fn: () => editPerson(x) })),
     ...db.logs.filter(l => has(l.content, l.date, pname(l.projectId))).sort(byDateDesc).map(l => ({ tag: '日志', t: `${l.date} ${pname(l.projectId)}`, s: l.content.replace(/\s+/g, ' ').slice(0, 50), fn: () => editLog(l) })),
   ].slice(0, 20);
   cur = 0;
