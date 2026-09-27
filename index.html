@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>施工管理平台</title>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--text:#1f2329;--muted:#8a919f;--line:#e6e8ec;
+  --pri:#2563eb;--pri-weak:#eaf1ff;--ok:#16a34a;--ok-weak:#e8f7ee;
+  --warn:#d97706;--warn-weak:#fdf3e2;--bad:#dc2626;--bad-weak:#fdecec;
+  --radius:12px;--shadow:0 1px 2px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1115;--card:#181b22;--text:#e6e8eb;--muted:#8b93a1;--line:#272c36;
+    --pri:#5b8def;--pri-weak:#1b2640;--ok:#34c26b;--ok-weak:#16291f;
+    --warn:#f0a53a;--warn-weak:#2e2414;--bad:#f06262;--bad-weak:#2f1a1a;--shadow:none}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--pri)}
+
+/* ---------- 布局 ---------- */
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
+  padding:10px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+.logo{font-weight:700;font-size:16px;white-space:nowrap}
+.logo span{color:var(--pri)}
+.search{position:relative;flex:1;max-width:460px;margin-left:auto}
+.search input{width:100%;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:18px;background:var(--bg);outline:none}
+.search input:focus{border-color:var(--pri)}
+.results{position:absolute;top:42px;left:0;right:0;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:60vh;overflow:auto}
+.results div{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
+.results div:last-child{border:0}
+.results div:hover,.results div.on{background:var(--pri-weak)}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:18px;line-height:1;flex:none}
+.wrap{display:flex;max-width:1200px;margin:0 auto}
+nav{width:180px;flex:none;padding:16px 10px;position:sticky;top:57px;height:calc(100vh - 57px)}
+nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:var(--text);text-decoration:none;margin-bottom:2px}
+nav a:hover{background:var(--card)}
+nav a.on{background:var(--pri-weak);color:var(--pri);font-weight:600}
+nav a b{margin-left:auto;background:var(--bad);color:#fff;border-radius:9px;font-size:11px;padding:0 6px;font-weight:600}
+main{flex:1;min-width:0;padding:16px 16px 40px}
+@media (max-width:860px){
+  .logo small{display:none}
+  nav{position:fixed;bottom:0;left:0;right:0;top:auto;width:auto;height:auto;z-index:20;display:flex;
+    padding:4px 4px calc(4px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}
+  nav a{flex:1;flex-direction:column;gap:0;font-size:11px;padding:4px 0;margin:0;position:relative}
+  nav a i{font-size:18px}
+  nav a b{position:absolute;top:0;right:calc(50% - 20px);margin:0}
+  nav a.nav-set{display:none}
+  .m-only{display:flex!important}
+  main{padding-bottom:90px}
+}
+nav a i{font-style:normal;width:20px;text-align:center}
+
+/* ---------- 组件 ---------- */
+h2{font-size:18px;margin:4px 0 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h2 .sp{flex:1}
+h3{font-size:15px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:12px}
+.grid{display:grid;gap:12px}
+.stats{grid-template-columns:repeat(4,1fr)}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{cursor:pointer;margin:0}
+.stat .n{font-size:26px;font-weight:700;line-height:1.2}
+.stat .l{color:var(--muted);font-size:13px}
+.two{grid-template-columns:1.2fr 1fr}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.btn{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--pri);color:var(--pri)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{opacity:.9;color:#fff}
+.btn.danger{color:var(--bad)}
+.btn.sm{height:26px;padding:0 10px;font-size:12px}
+select.flt{height:32px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:0 8px}
+.tabs{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:2px}
+.tabs button{border:0;background:none;padding:4px 12px;border-radius:6px;cursor:pointer}
+.tabs button.on{background:var(--pri-weak);color:var(--pri);font-weight:600}
+.tag{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;line-height:20px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.tag.ok{background:var(--ok-weak);color:var(--ok)}
+.tag.warn{background:var(--warn-weak);color:var(--warn)}
+.tag.bad{background:var(--bad-weak);color:var(--bad)}
+.tag.pri{background:var(--pri-weak);color:var(--pri)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row .sp{flex:1}
+.item{padding:12px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border:0;padding-bottom:0}
+.item:first-child{padding-top:0}
+.title{font-weight:600}
+.pre{white-space:pre-wrap;margin-top:6px}
+.empty{text-align:center;color:var(--muted);padding:30px 0}
+
+/* 进度条：实线=实际，竖线=计划 */
+.bar{position:relative;height:8px;border-radius:4px;background:var(--bg);margin:8px 0 4px;overflow:visible}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--pri)}
+.bar i.warn{background:var(--warn)}.bar i.bad{background:var(--bad)}.bar i.ok{background:var(--ok)}
+.bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.45}
+input[type=range]{width:100%;accent-color:var(--pri)}
+
+/* 智能提醒 */
+.alert{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:8px;margin-bottom:6px;cursor:pointer}
+.alert:hover{filter:brightness(.97)}
+.alert.bad{background:var(--bad-weak)}.alert.warn{background:var(--warn-weak)}.alert.info{background:var(--pri-weak)}
+.alert .dot{width:8px;height:8px;border-radius:50%;margin-top:7px;flex:none}
+.alert.bad .dot{background:var(--bad)}.alert.warn .dot{background:var(--warn)}.alert.info .dot{background:var(--pri)}
+.alert .go{margin-left:auto;color:var(--muted);white-space:nowrap;font-size:12px;padding-top:1px}
+
+/* 表单弹窗 */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal[hidden]{display:none}
+.sheet{background:var(--card);border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow:auto;padding:18px}
+@media (max-width:600px){.modal{align-items:flex-end;padding:0}.sheet{border-radius:14px 14px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fields label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.fields label.full{grid-column:1/-1}
+.fields input,.fields select,.fields textarea{height:36px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--bg);color:var(--text);outline:none;width:100%}
+.fields textarea{height:auto;min-height:120px;padding:8px 10px;resize:vertical}
+.fields input:focus,.fields select:focus,.fields textarea:focus{border-color:var(--pri)}
+.form-actions{display:flex;gap:8px;margin-top:16px}
+.form-actions .sp{flex:1}
+.menu{display:grid;gap:8px}
+.menu button{text-align:left;height:auto;padding:12px 14px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:20px;z-index:60;font-size:13px}
+kbd{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🏗 施工<span>管理</span> <small class="muted">· 方便 简约 智能</small></div>
+  <div class="search">
+    <input id="q" placeholder="搜索项目 / 日志 / 问题 / 材料   Ctrl+K" autocomplete="off">
+    <div class="results" id="results" hidden></div>
+  </div>
+  <a class="icon-btn m-only" href="#settings" title="数据管理" style="display:none;align-items:center;justify-content:center;text-decoration:none;color:inherit">⚙</a>
+  <button class="icon-btn" id="add" title="快速新建 (N)">＋</button>
+</header>
+<div class="wrap">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div class="modal" id="modal" hidden></div>
+
+<script>
+/* ================= 数据层 ================= */
+const KEY = 'cm-data-v1';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const fmt = d => { d = new Date(d); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const today = () => fmt(new Date());
+const addDays = (n, base = today()) => { const d = new Date(base + 'T00:00'); d.setDate(d.getDate() + n); return fmt(d); };
+const diff = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / 864e5);
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+let db = load();
+function load() {
+  try { const s = localStorage.getItem(KEY); if (s) return normalize(JSON.parse(s)); } catch (e) {}
+  return seed();
+}
+function normalize(d) {
+  return { projects: d.projects || [], logs: d.logs || [], issues: d.issues || [], materials: d.materials || [] };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { toast('浏览器禁止本地存储，数据仅在本次打开有效'); } }
+
+function seed() {
+  const p1 = uid(), p2 = uid() + 'b', p3 = uid() + 'c';
+  return {
+    projects: [
+      { id: p1, name: '城南安置房一期', manager: '张工', start: addDays(-120), end: addDays(60), progress: 55, status: '在建', note: '6 栋住宅，框剪结构' },
+      { id: p2, name: '滨江路市政改造', manager: '李工', start: addDays(-40), end: addDays(80), progress: 22, status: '在建', note: '道路、管网及绿化' },
+      { id: p3, name: '科创园 3# 楼', manager: '王工', start: addDays(-200), end: addDays(-5), progress: 92, status: '在建', note: '装饰装修收尾' },
+    ],
+    logs: [
+      { id: uid(), projectId: p1, date: addDays(-1), weather: '晴', workers: 86, content: '【施工内容】3# 楼 12 层墙柱钢筋绑扎、模板支设；5# 楼 8 层顶板混凝土浇筑。\n【安全质量】脚手架例行检查，未发现隐患。' },
+      { id: uid(), projectId: p2, date: addDays(-1), weather: '多云', workers: 42, content: '【施工内容】K1+200～K1+350 段雨水管道开挖及铺设。' },
+      { id: uid(), projectId: p3, date: today(), weather: '晴', workers: 25, content: '【施工内容】5～8 层吊顶及墙面乳胶漆施工。' },
+    ],
+    issues: [
+      { id: uid(), projectId: p1, type: '安全', level: '高', desc: '5# 楼临边防护栏杆缺失', owner: '赵班长', deadline: addDays(-2), status: '待整改' },
+      { id: uid(), projectId: p2, type: '质量', level: '中', desc: '管道基础砂垫层厚度不足', owner: '钱班长', deadline: addDays(2), status: '待整改' },
+      { id: uid(), projectId: p1, type: '安全', level: '低', desc: '配电箱未上锁', owner: '孙电工', deadline: addDays(-6), status: '已整改' },
+    ],
+    materials: [
+      { id: uid(), projectId: p1, name: '螺纹钢 HRB400', unit: '吨', stock: 12, min: 20, updated: addDays(-1) },
+      { id: uid(), projectId: p1, name: '商品混凝土 C30', unit: 'm³', stock: 180, min: 100, updated: addDays(-1) },
+      { id: uid(), projectId: p2, name: 'DN600 雨水管', unit: '米', stock: 40, min: 60, updated: addDays(-3) },
+      { id: uid(), projectId: p3, name: '乳胶漆', unit: '桶', stock: 65, min: 30, updated: today() },
+    ],
+  };
+}
+
+const getP = id => db.projects.find(p => p.id === id);
+const pname = id => getP(id)?.name || '（已删除项目）';
+const active = () => db.projects.filter(p => p.status !== '已完工');
+const byDateDesc = (a, b) => (b.date || '').localeCompare(a.date || '');
+
+/* ================= 智能分析 ================= */
+// 计划进度：按工期时间线性推算
+function planPct(p) {
+  if (!p.start || !p.end) return 0;
+  const total = diff(p.start, p.end);
+  if (total <= 0) return 100;
+  return clamp(Math.round(diff(p.start, today()) / total * 100), 0, 100);
+}
+function health(p) {
+  if (p.status === '已完工' || p.progress >= 100) return 'ok';
+  if (today() > p.end) return 'bad';
+  const lag = planPct(p) - p.progress;
+  return lag >= 15 ? 'bad' : lag >= 5 ? 'warn' : '';
+}
+const isOverdue = i => i.status !== '已整改' && i.deadline && i.deadline < today();
+const isLow = m => Number(m.stock) <= Number(m.min);
+
+function alerts() {
+  const t = today(), out = [];
+  active().forEach(p => {
+    const plan = planPct(p);
+    if (p.status === '停工') out.push({ lv: 'warn', text: `${p.name} 处于停工状态`, go: 'projects' });
+    else if (t > p.end) out.push({ lv: 'bad', text: `${p.name} 已超出计划竣工日 ${diff(p.end, t)} 天，实际进度 ${p.progress}%`, go: 'projects' });
+    else if (plan - p.progress >= 5) out.push({ lv: plan - p.progress >= 15 ? 'bad' : 'warn', text: `${p.name} 进度滞后 ${plan - p.progress}%（计划 ${plan}% / 实际 ${p.progress}%）`, go: 'projects' });
+    if (p.status !== '停工' && !db.logs.some(l => l.projectId === p.id && l.date === t))
+      out.push({ lv: 'info', text: `${p.name} 今日还没写施工日志`, act: () => editLog(null, { projectId: p.id }), btn: '去填写' });
+  });
+  db.issues.filter(i => i.status !== '已整改').forEach(i => {
+    if (isOverdue(i)) out.push({ lv: 'bad', text: `【${i.type}】${i.desc} — 已逾期 ${diff(i.deadline, t)} 天（${i.owner || '未指定'}）`, act: () => editIssue(i), btn: '处理' });
+    else if (i.level === '高') out.push({ lv: 'warn', text: `【${i.type}·高风险】${i.desc} — ${i.deadline ? diff(t, i.deadline) + ' 天后到期' : '未设期限'}`, act: () => editIssue(i), btn: '处理' });
+  });
+  db.materials.filter(isLow).forEach(m =>
+    out.push({ lv: 'warn', text: `${pname(m.projectId)}：${m.name} 库存 ${m.stock}${m.unit}，低于预警值 ${m.min}${m.unit}`, act: () => stockForm(m, 1), btn: '入库' }));
+  const rank = { bad: 0, warn: 1, info: 2 };
+  return out.sort((a, b) => rank[a.lv] - rank[b.lv]);
+}
+
+// 日志智能草稿：根据上一篇日志、待整改问题、库存和进度自动生成
+function draftLog(pid) {
+  const p = getP(pid); if (!p) return '';
+  const last = db.logs.filter(l => l.projectId === pid && l.date < today()).sort(byDateDesc)[0];
+  const lastWork = last ? (last.content.match(/【施工内容】([^\n]*)/) || [, last.content.split('\n')[0]])[1] : '';
+  const open = db.issues.filter(i => i.projectId === pid && i.status !== '已整改');
+  const low = db.materials.filter(m => m.projectId === pid && isLow(m));
+  const lines = [];
+  lines.push('【施工内容】' + (lastWork ? `（续昨日）${lastWork}` : '（填写今日施工部位及内容）'));
+  lines.push('【安全质量】' + (open.length ? `待整改 ${open.length} 项：` + open.map(i => `${i.desc}（${i.owner || '待指定'}，${isOverdue(i) ? '已逾期' : '期限 ' + (i.deadline || '-')}）`).join('；') : '现场巡查未发现新问题。'));
+  if (low.length) lines.push('【材料】库存预警：' + low.map(m => `${m.name} 剩 ${m.stock}${m.unit}`).join('；') + '，需及时进场。');
+  lines.push(`【进度】形象进度 ${p.progress}%，计划进度 ${planPct(p)}%。`);
+  return lines.join('\n');
+}
+
+/* ================= 路由与导航 ================= */
+const VIEWS = {
+  home:      { name: '首页',   icon: '⌂', render: viewHome },
+  projects:  { name: '项目',   icon: '▦', render: viewProjects },
+  logs:      { name: '日志',   icon: '✎', render: viewLogs },
+  issues:    { name: '安全质量', icon: '⚠', render: viewIssues },
+  materials: { name: '材料',   icon: '▤', render: viewMaterials },
+  settings:  { name: '数据',   icon: '⚙', render: viewSettings },
+};
+const state = { pid: '', issueTab: '待整改' };
+const view = () => VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'home';
+const go = v => { if (location.hash.slice(1) === v) render(); else location.hash = v; };
+
+function render() {
+  const v = view();
+  const badge = {
+    issues: db.issues.filter(i => i.status !== '已整改').length,
+    materials: db.materials.filter(isLow).length,
+  };
+  $('#nav').innerHTML = Object.entries(VIEWS).map(([k, o]) =>
+    `<a href="#${k}" class="${k === v ? 'on' : ''} ${k === 'settings' ? 'nav-set' : ''}"><i>${o.icon}</i>${o.name}${badge[k] ? `<b>${badge[k]}</b>` : ''}</a>`).join('');
+  $('#main').innerHTML = VIEWS[v].render();
+  bind($('#main'));
+}
+window.addEventListener('hashchange', () => { render(); scrollTo(0, 0); });
+
+// 事件委托：data-act="名称" data-id="..."
+const ACTS = {};
+function bind(root) {
+  root.querySelectorAll('[data-act]').forEach(el => {
+    const ev = el.tagName === 'SELECT' || el.type === 'range' ? 'change' : 'click';
+    el.addEventListener(ev, e => { e.stopPropagation(); ACTS[el.dataset.act](el.dataset.id, el, e); });
+  });
+}
+
+function projectFilter() {
+  return `<select class="flt" data-act="pid"><option value="">全部项目</option>${db.projects.map(p =>
+    `<option value="${p.id}" ${p.id === state.pid ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`;
+}
+ACTS.pid = (_, el) => { state.pid = el.value; render(); };
+const inPid = x => !state.pid || x.projectId === state.pid;
+
+/* ================= 视图 ================= */
+function viewHome() {
+  const t = today(), act = active();
+  const logged = act.filter(p => db.logs.some(l => l.projectId === p.id && l.date === t)).length;
+  const openIssues = db.issues.filter(i => i.status !== '已整改');
+  const al = alerts();
+  ACTS.alert = i => { const a = al[i]; a.act ? a.act() : go(a.go); };
+  return `
+  <h2>${greet()}<span class="sp"></span><span class="muted small">${t} 星期${'日一二三四五六'[new Date().getDay()]}</span></h2>
+  <div class="grid stats">
+    ${stat(act.length, '在建项目', 'projects')}
+    ${stat(openIssues.length, '待整改问题', 'issues', openIssues.some(isOverdue) ? 'var(--bad)' : '')}
+    ${stat(db.materials.filter(isLow).length, '库存预警', 'materials', db.materials.some(isLow) ? 'var(--warn)' : '')}
+    ${stat(`${logged}<span class="muted" style="font-size:16px">/${act.length}</span>`, '今日已填日志', 'logs')}
+  </div>
+  <div class="grid two" style="margin-top:12px">
+    <div class="card">
+      <h3>🤖 智能提醒 <span class="muted small">${al.length ? `${al.length} 条待关注` : ''}</span></h3>
+      ${al.length ? al.map((a, i) => `<div class="alert ${a.lv}" data-act="alert" data-id="${i}"><span class="dot"></span><span>${esc(a.text)}</span><span class="go">${a.btn || '查看'} ›</span></div>`).join('')
+        : '<div class="empty">✅ 一切正常，暂无需要处理的事项</div>'}
+    </div>
+    <div class="card">
+      <h3>项目进度 <span class="muted small">竖线 = 按工期应达到的进度</span></h3>
+      ${act.length ? act.map(p => `<div class="item" style="cursor:pointer" data-act="openP" data-id="${p.id}">
+        <div class="row"><span class="title">${esc(p.name)}</span><span class="sp"></span><b>${p.progress}%</b></div>
+        ${bar(p)}
+        <div class="muted small">${remain(p)}</div></div>`).join('') : '<div class="empty">暂无在建项目</div>'}
+    </div>
+  </div>`;
+}
+ACTS.openP = id => { state.pid = id; go('projects'); };
+const stat = (n, l, v, color = '') => `<div class="card stat" onclick="go('${v}')"><div class="n" style="color:${color}">${n}</div><div class="l">${l}</div></div>`;
+const greet = () => { const h = new Date().getHours(); return h < 11 ? '早上好 👷' : h < 14 ? '中午好 👷' : h < 18 ? '下午好 👷' : '晚上好 👷'; };
+const bar = p => `<div class="bar"><i class="${health(p)}" style="width:${p.progress}%"></i><u style="left:${planPct(p)}%"></u></div>`;
+function remain(p) {
+  if (p.status === '已完工') return `已完工 · ${p.manager || ''}`;
+  const d = diff(today(), p.end);
+  return `${p.manager ? esc(p.manager) + ' · ' : ''}计划进度 ${planPct(p)}% · ${d >= 0 ? `剩余 ${d} 天` : `<span style="color:var(--bad)">超期 ${-d} 天</span>`}`;
+}
+
+function viewProjects() {
+  const list = db.projects.filter(p => !state.pid || p.id === state.pid);
+  return `<h2>项目管理<span class="sp"></span>${projectFilter()}<button class="btn pri" data-act="newP">＋ 新建项目</button></h2>
+  ${list.length ? list.map(p => {
+    const h = health(p);
+    return `<div class="card">
+      <div class="row"><span class="title">${esc(p.name)}</span>
+        <span class="tag ${p.status === '已完工' ? 'ok' : p.status === '停工' ? 'warn' : 'pri'}">${esc(p.status)}</span>
+        ${h === 'bad' ? '<span class="tag bad">严重滞后</span>' : h === 'warn' ? '<span class="tag warn">轻微滞后</span>' : ''}
+        <span class="sp"></span><button class="btn sm" data-act="editP" data-id="${p.id}">编辑</button></div>
+      <div class="muted small">${esc(p.start)} ~ ${esc(p.end)} · ${remain(p)}</div>
+      ${p.note ? `<div class="small" style="margin-top:4px">${esc(p.note)}</div>` : ''}
+      <div class="row" style="margin-top:8px"><span class="small muted">拖动更新进度</span><span class="sp"></span><b id="pv-${p.id}">${p.progress}%</b></div>
+      <input type="range" min="0" max="100" step="1" value="${p.progress}" data-act="prog" data-id="${p.id}" oninput="document.getElementById('pv-${p.id}').textContent=this.value+'%'">
+      <div class="row small muted">
+        <span>日志 ${db.logs.filter(l => l.projectId === p.id).length} 篇</span>·
+        <span>待整改 ${db.issues.filter(i => i.projectId === p.id && i.status !== '已整改').length} 项</span>·
+        <span>库存预警 ${db.materials.filter(m => m.projectId === p.id && isLow(m)).length} 项</span>
+      </div>
+    </div>`;
+  }).join('') : '<div class="card empty">还没有项目，点右上角「新建项目」开始</div>'}`;
+}
+ACTS.newP = () => editProject();
+ACTS.editP = id => editProject(getP(id));
+ACTS.prog = (id, el) => {
+  const p = getP(id); p.progress = Number(el.value);
+  if (p.progress >= 100 && p.status !== '已完工') { p.status = '已完工'; toast('进度 100%，已自动标记为已完工'); }
+  else if (p.progress < 100 && p.status === '已完工') p.status = '在建';
+  save(); render();
+};
+
+function viewLogs() {
+  const list = db.logs.filter(inPid).sort(byDateDesc);
+  let lastDate = '';
+  return `<h2>施工日志<span class="sp"></span>${projectFilter()}<button class="btn pri" data-act="newL">＋ 写日志</button></h2>
+  <div class="card">${list.length ? list.map(l => {
+    const head = l.date !== lastDate ? `<div class="muted small" style="margin:${lastDate ? '14px' : '0'} 0 4px;font-weight:600">${esc(l.date)}${l.date === today() ? ' · 今天' : ''}</div>` : '';
+    lastDate = l.date;
+    return head + `<div class="item" style="padding-top:6px">
+      <div class="row"><span class="title">${esc(pname(l.projectId))}</span><span class="tag">${esc(l.weather)}</span><span class="tag">${Number(l.workers) || 0} 人</span>
+      <span class="sp"></span><button class="btn sm" data-act="copyL" data-id="${l.id}" title="以此为模板写今天的日志">复用</button><button class="btn sm" data-act="editL" data-id="${l.id}">编辑</button></div>
+      <div class="pre">${esc(l.content)}</div></div>`;
+  }).join('') : '<div class="empty">暂无日志</div>'}</div>`;
+}
+ACTS.newL = () => editLog(null, { projectId: state.pid });
+ACTS.editL = id => editLog(db.logs.find(l => l.id === id));
+ACTS.copyL = id => { const l = db.logs.find(x => x.id === id); editLog(null, { ...l, id: undefined, date: today() }); };
+
+function viewIssues() {
+  const tabs = ['待整改', '已整改', '全部'];
+  const list = db.issues.filter(inPid).filter(i => state.issueTab === '全部' || i.status === state.issueTab)
+    .sort((a, b) => (isOverdue(b) - isOverdue(a)) || ('高中低'.indexOf(a.level) - '高中低'.indexOf(b.level)) || (a.deadline || '').localeCompare(b.deadline || ''));
+  return `<h2>安全质量<span class="sp"></span>${projectFilter()}<button class="btn pri" data-act="newI">＋ 登记问题</button></h2>
+  <div style="margin-bottom:12px" class="tabs">${tabs.map(t => `<button class="${t === state.issueTab ? 'on' : ''}" data-act="itab" data-id="${t}">${t}</button>`).join('')}</div>
+  <div class="card">${list.length ? list.map(i => `<div class="item">
+    <div class="row"><span class="tag ${i.type === '安全' ? 'bad' : 'pri'}">${esc(i.type)}</span>
+      <span class="tag ${i.level === '高' ? 'bad' : i.level === '中' ? 'warn' : ''}">${esc(i.level)}风险</span>
+      <span class="title">${esc(i.desc)}</span></div>
+    <div class="row small muted" style="margin-top:4px">
+      <span>${esc(pname(i.projectId))} · 责任人 ${esc(i.owner || '-')} · 期限 ${esc(i.deadline || '-')}</span>
+      ${isOverdue(i) ? `<span class="tag bad">逾期 ${diff(i.deadline, today())} 天</span>` : ''}
+      ${i.status === '已整改' ? '<span class="tag ok">已整改</span>' : ''}
+      <span class="sp"></span>
+      ${i.status !== '已整改' ? `<button class="btn sm pri" data-act="fixI" data-id="${i.id}">✓ 已整改</button>` : ''}
+      <button class="btn sm" data-act="editI" data-id="${i.id}">编辑</button></div>
+  </div>`).join('') : `<div class="empty">${state.issueTab === '待整改' ? '🎉 没有待整改的问题' : '暂无记录'}</div>`}</div>`;
+}
+ACTS.itab = t => { state.issueTab = t; render(); };
+ACTS.newI = () => editIssue(null, { projectId: state.pid });
+ACTS.editI = id => editIssue(db.issues.find(i => i.id === id));
+ACTS.fixI = id => { const i = db.issues.find(x => x.id === id); i.status = '已整改'; i.fixed = today(); save(); render(); toast('已标记整改完成'); };
+
+function viewMaterials() {
+  const list = db.materials.filter(inPid).sort((a, b) => isLow(b) - isLow(a));
+  return `<h2>材料库存<span class="sp"></span>${projectFilter()}<button class="btn pri" data-act="newM">＋ 新增材料</button></h2>
+  <div class="card">${list.length ? list.map(m => `<div class="item">
+    <div class="row"><span class="title">${esc(m.name)}</span>${isLow(m) ? '<span class="tag warn">库存不足</span>' : ''}
+      <span class="sp"></span><b style="font-size:16px;color:${isLow(m) ? 'var(--warn)' : ''}">${Number(m.stock)}</b><span class="muted">${esc(m.unit)}</span></div>
+    <div class="row small muted" style="margin-top:4px"><span>${esc(pname(m.projectId))} · 预警值 ${Number(m.min)}${esc(m.unit)} · 更新 ${esc(m.updated || '-')}</span>
+      <span class="sp"></span>
+      <button class="btn sm" data-act="inM" data-id="${m.id}">＋ 入库</button>
+      <button class="btn sm" data-act="outM" data-id="${m.id}">－ 出库</button>
+      <button class="btn sm" data-act="editM" data-id="${m.id}">编辑</button></div>
+  </div>`).join('') : '<div class="empty">暂无材料</div>'}</div>`;
+}
+ACTS.newM = () => editMaterial(null, { projectId: state.pid });
+ACTS.editM = id => editMaterial(db.materials.find(m => m.id === id));
+ACTS.inM = id => stockForm(db.materials.find(m => m.id === id), 1);
+ACTS.outM = id => stockForm(db.materials.find(m => m.id === id), -1);
+
+function viewSettings() {
+  return `<h2>数据管理</h2>
+  <div class="card"><h3>备份与恢复</h3>
+    <p class="muted small">数据保存在当前浏览器中。建议定期导出备份，换电脑时导入即可。</p>
+    <div class="row"><button class="btn pri" data-act="exp">导出备份 (JSON)</button><button class="btn" data-act="imp">导入备份</button><button class="btn" data-act="csv">导出日志 (Excel 可打开)</button></div></div>
+  <div class="card"><h3>重置</h3>
+    <div class="row"><button class="btn" data-act="demo">恢复演示数据</button><button class="btn danger" data-act="clear">清空全部数据</button></div></div>
+  <div class="card"><h3>快捷键</h3><div class="small muted"><kbd>Ctrl</kbd>+<kbd>K</kbd> 搜索 · <kbd>N</kbd> 快速新建 · <kbd>Esc</kbd> 关闭弹窗</div></div>`;
+}
+ACTS.exp = () => download(`施工管理备份-${today()}.json`, JSON.stringify(db, null, 2), 'application/json');
+ACTS.csv = () => {
+  const q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
+  const rows = [['日期', '项目', '天气', '人数', '内容'], ...db.logs.slice().sort(byDateDesc).map(l => [l.date, pname(l.projectId), l.weather, l.workers, l.content])];
+  download(`施工日志-${today()}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv');
+};
+ACTS.imp = () => {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => {
+    try { db = normalize(JSON.parse(t)); save(); render(); toast('导入成功'); } catch (e) { toast('文件格式不正确'); } }); };
+  inp.click();
+};
+ACTS.demo = () => { if (confirm('用演示数据覆盖当前全部数据？')) { db = seed(); save(); go('home'); } };
+ACTS.clear = () => { if (confirm('确定清空全部数据？此操作不可恢复，建议先导出备份。')) { db = normalize({}); save(); go('home'); } };
+function download(name, text, type) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ================= 表单 ================= */
+const projOpts = () => db.projects.map(p => ({ v: p.id, t: p.name }));
+const defPid = pid => pid || state.pid || active()[0]?.id || db.projects[0]?.id || '';
+
+function openForm({ title, fields, data = {}, onSave, onDelete, extra }) {
+  const m = $('#modal');
+  m.innerHTML = `<div class="sheet"><h3>${esc(title)}</h3><form><div class="fields">${fields.map(f => field(f, data[f.k])).join('')}</div>
+    <div class="form-actions">${onDelete ? '<button type="button" class="btn danger" data-del>删除</button>' : ''}<span class="sp"></span>
+    <button type="button" class="btn" data-cancel>取消</button><button class="btn pri">保存</button></div></form></div>`;
+  m.hidden = false;
+  const form = m.querySelector('form');
+  form.onsubmit = e => {
+    e.preventDefault();
+    const o = {};
+    for (const f of fields) {
+      let v = form.elements[f.k].value.trim();
+      if (f.type === 'number') v = v === '' ? 0 : Number(v);
+      o[f.k] = v;
+    }
+    if (onSave(o) === false) return;
+    save(); closeModal(); render();
+  };
+  form.querySelector('[data-cancel]').onclick = closeModal;
+  if (onDelete) form.querySelector('[data-del]').onclick = () => { if (confirm('确定删除？')) { onDelete(); save(); closeModal(); render(); } };
+  extra && extra(form);
+  setTimeout(() => form.querySelector('input:not([type=date]),select,textarea')?.focus(), 30);
+}
+function field(f, v) {
+  v = v ?? f.def ?? '';
+  const req = f.req ? 'required' : '';
+  let input;
+  if (f.type === 'select') {
+    const opts = (typeof f.opts === 'function' ? f.opts() : f.opts).map(o => typeof o === 'string' ? { v: o, t: o } : o);
+    input = `<select name="${f.k}" ${req}>${opts.map(o => `<option value="${esc(o.v)}" ${String(o.v) === String(v) ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;
+  } else if (f.type === 'textarea') {
+    input = `<textarea name="${f.k}" ${req} placeholder="${esc(f.ph || '')}">${esc(v)}</textarea>`;
+  } else {
+    input = `<input name="${f.k}" type="${f.type || 'text'}" value="${esc(v)}" ${req} ${f.type === 'number' ? 'step="any" min="0"' : ''} ${f.max ? `max="${f.max}"` : ''} placeholder="${esc(f.ph || '')}">`;
+  }
+  return `<label class="${f.full ? 'full' : ''}">${esc(f.label)}${f.tool || ''}${input}</label>`;
+}
+function closeModal() { $('#modal').hidden = true; $('#modal').innerHTML = ''; }
+$('#modal').addEventListener('mousedown', e => { if (e.target.id === 'modal') closeModal(); });
+
+function upsert(list, item, data) {
+  if (item) Object.assign(item, data); else list.push({ id: uid(), ...data });
+}
+const needProject = () => { if (!db.projects.length) { toast('请先新建一个项目'); editProject(); return true; } };
+
+function editProject(p) {
+  openForm({
+    title: p ? '编辑项目' : '新建项目', data: p || { start: today(), end: addDays(180), progress: 0, status: '在建' },
+    fields: [
+      { k: 'name', label: '项目名称', req: 1, full: 1, ph: '如：城南安置房一期' },
+      { k: 'manager', label: '项目负责人' },
+      { k: 'status', label: '状态', type: 'select', opts: ['在建', '停工', '已完工'] },
+      { k: 'start', label: '开工日期', type: 'date', req: 1 },
+      { k: 'end', label: '计划竣工', type: 'date', req: 1 },
+      { k: 'progress', label: '实际进度 %', type: 'number', max: 100 },
+      { k: 'note', label: '备注', full: 1 },
+    ],
+    onSave: d => {
+      if (d.end < d.start) { toast('竣工日期不能早于开工日期'); return false; }
+      d.progress = clamp(d.progress, 0, 100);
+      if (d.progress >= 100) d.status = '已完工';
+      upsert(db.projects, p, d);
+    },
+    onDelete: p && (() => {
+      db.projects = db.projects.filter(x => x !== p);
+      ['logs', 'issues', 'materials'].forEach(k => db[k] = db[k].filter(x => x.projectId !== p.id));
+      if (state.pid === p.id) state.pid = '';
+    }),
+  });
+}
+
+function editLog(l, preset = {}) {
+  if (needProject()) return;
+  const data = l || { date: today(), weather: '晴', workers: '', ...preset, projectId: defPid(preset.projectId) };
+  openForm({
+    title: l ? '编辑施工日志' : '写施工日志', data,
+    fields: [
+      { k: 'projectId', label: '项目', type: 'select', opts: projOpts, full: 1 },
+      { k: 'date', label: '日期', type: 'date', req: 1 },
+      { k: 'weather', label: '天气', type: 'select', opts: ['晴', '多云', '阴', '小雨', '大雨', '雪', '大风', '高温'] },
+      { k: 'workers', label: '现场人数', type: 'number' },
+      { k: 'content', label: '施工内容', type: 'textarea', full: 1, req: 1, tool: ' <button type="button" class="btn sm" data-draft style="float:right;margin-top:-4px">🤖 智能生成</button>', ph: '点击右上角「智能生成」，自动汇总进度、待整改问题和材料预警' },
+    ],
+    onSave: d => {
+      const dup = db.logs.find(x => x !== l && x.projectId === d.projectId && x.date === d.date);
+      if (dup && !confirm('该项目当天已有日志，仍要再保存一篇吗？')) return false;
+      upsert(db.logs, l, d);
+    },
+    onDelete: l && (() => db.logs = db.logs.filter(x => x !== l)),
+    extra: f => {
+      f.querySelector('[data-draft]').onclick = e => {
+        e.preventDefault();
+        const ta = f.elements.content;
+        if (ta.value.trim() && !confirm('用智能草稿替换当前内容？')) return;
+        ta.value = draftLog(f.elements.projectId.value); ta.focus();
+      };
+      if (!l && !data.content) f.elements.content.value = draftLog(data.projectId);
+      f.elements.projectId.onchange = () => { if (!l) f.elements.content.value = draftLog(f.elements.projectId.value); };
+    },
+  });
+}
+
+function editIssue(i, preset = {}) {
+  if (needProject()) return;
+  openForm({
+    title: i ? '编辑问题' : '登记安全质量问题',
+    data: i || { type: '安全', level: '中', status: '待整改', deadline: addDays(3), ...preset, projectId: defPid(preset.projectId) },
+    fields: [
+      { k: 'projectId', label: '项目', type: 'select', opts: projOpts, full: 1 },
+      { k: 'desc', label: '问题描述', req: 1, full: 1, ph: '如：5# 楼临边防护缺失' },
+      { k: 'type', label: '类别', type: 'select', opts: ['安全', '质量', '文明施工'] },
+      { k: 'level', label: '风险等级', type: 'select', opts: ['高', '中', '低'] },
+      { k: 'owner', label: '整改责任人' },
+      { k: 'deadline', label: '整改期限', type: 'date' },
+      { k: 'status', label: '状态', type: 'select', opts: ['待整改', '已整改'] },
+    ],
+    onSave: d => {
+      if (d.status === '已整改' && (!i || i.status !== '已整改')) d.fixed = today();
+      upsert(db.issues, i, d);
+    },
+    onDelete: i && (() => db.issues = db.issues.filter(x => x !== i)),
+    extra: f => {
+      // 智能：高风险默认 1 天期限，中 3 天，低 7 天
+      f.elements.level.onchange = () => { if (!i) f.elements.deadline.value = addDays({ 高: 1, 中: 3, 低: 7 }[f.elements.level.value]); };
+    },
+  });
+}
+
+function editMaterial(m, preset = {}) {
+  if (needProject()) return;
+  openForm({
+    title: m ? '编辑材料' : '新增材料',
+    data: m || { unit: '吨', stock: 0, min: 0, ...preset, projectId: defPid(preset.projectId) },
+    fields: [
+      { k: 'projectId', label: '项目', type: 'select', opts: projOpts, full: 1 },
+      { k: 'name', label: '材料名称', req: 1, full: 1, ph: '如：螺纹钢 HRB400' },
+      { k: 'unit', label: '单位', ph: '吨 / m³ / 米 / 桶' },
+      { k: 'stock', label: '当前库存', type: 'number' },
+      { k: 'min', label: '预警值（低于即提醒）', type: 'number' },
+    ],
+    onSave: d => { d.updated = today(); upsert(db.materials, m, d); },
+    onDelete: m && (() => db.materials = db.materials.filter(x => x !== m)),
+  });
+}
+
+function stockForm(m, sign) {
+  openForm({
+    title: `${sign > 0 ? '入库' : '出库'}：${m.name}（当前 ${m.stock}${m.unit}）`,
+    fields: [{ k: 'qty', label: `数量（${m.unit}）`, type: 'number', req: 1, full: 1 }],
+    onSave: d => {
+      const n = Number(m.stock) + sign * d.qty;
+      if (n < 0) { toast('出库数量超过库存'); return false; }
+      m.stock = Math.round(n * 1000) / 1000; m.updated = today();
+      if (isLow(m)) toast(`${m.name} 库存已低于预警值`);
+    },
+  });
+}
+
+function quickAdd() {
+  const m = $('#modal');
+  m.innerHTML = `<div class="sheet"><h3>快速新建</h3><div class="menu">
+    <button class="btn" data-q="log">✎ 写施工日志 <span class="muted small">— 自动生成草稿</span></button>
+    <button class="btn" data-q="issue">⚠ 登记安全质量问题</button>
+    <button class="btn" data-q="mat">▤ 新增材料</button>
+    <button class="btn" data-q="proj">▦ 新建项目</button></div></div>`;
+  m.hidden = false;
+  const fn = { log: () => editLog(), issue: () => editIssue(), mat: () => editMaterial(), proj: () => editProject() };
+  m.querySelectorAll('[data-q]').forEach(b => b.onclick = () => fn[b.dataset.q]());
+}
+$('#add').onclick = quickAdd;
+
+/* ================= 全局搜索 ================= */
+const q = $('#q'), res = $('#results');
+let hits = [], cur = 0;
+function search() {
+  const kw = q.value.trim().toLowerCase();
+  if (!kw) { res.hidden = true; return; }
+  const has = (...s) => s.some(x => String(x ?? '').toLowerCase().includes(kw));
+  hits = [
+    ...db.projects.filter(p => has(p.name, p.manager, p.note)).map(p => ({ tag: '项目', t: p.name, s: `${p.manager || ''} · ${p.progress}%`, fn: () => { state.pid = p.id; go('projects'); } })),
+    ...db.issues.filter(i => has(i.desc, i.owner, i.type)).map(i => ({ tag: '问题', t: i.desc, s: `${pname(i.projectId)} · ${i.status}`, fn: () => editIssue(i) })),
+    ...db.materials.filter(m => has(m.name)).map(m => ({ tag: '材料', t: m.name, s: `${pname(m.projectId)} · 库存 ${m.stock}${m.unit}`, fn: () => editMaterial(m) })),
+    ...db.logs.filter(l => has(l.content, l.date, pname(l.projectId))).sort(byDateDesc).map(l => ({ tag: '日志', t: `${l.date} ${pname(l.projectId)}`, s: l.content.replace(/\s+/g, ' ').slice(0, 50), fn: () => editLog(l) })),
+  ].slice(0, 20);
+  cur = 0;
+  res.innerHTML = hits.length ? hits.map((h, i) => `<div data-i="${i}" class="${i === 0 ? 'on' : ''}"><span class="tag pri">${h.tag}</span> ${esc(h.t)}<div class="muted small">${esc(h.s)}</div></div>`).join('')
+    : '<div class="muted">没有找到相关内容</div>';
+  res.hidden = false;
+  res.querySelectorAll('[data-i]').forEach(d => d.onmousedown = e => { e.preventDefault(); pick(+d.dataset.i); });
+}
+function pick(i) { const h = hits[i]; if (!h) return; q.value = ''; res.hidden = true; q.blur(); h.fn(); }
+q.addEventListener('input', search);
+q.addEventListener('blur', () => setTimeout(() => res.hidden = true, 100));
+q.addEventListener('focus', search);
+q.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); cur = clamp(cur + (e.key === 'ArrowDown' ? 1 : -1), 0, hits.length - 1);
+    res.querySelectorAll('[data-i]').forEach((d, i) => d.classList.toggle('on', i === cur));
+  } else if (e.key === 'Enter') pick(cur);
+  else if (e.key === 'Escape') { q.value = ''; q.blur(); }
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); q.focus(); return; }
+  if (e.key === 'Escape' && !$('#modal').hidden) { closeModal(); return; }
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (!typing && $('#modal').hidden && e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); quickAdd(); }
+});
+
+let toastTimer;
+function toast(msg) {
+  document.querySelector('.toast')?.remove(); clearTimeout(toastTimer);
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  toastTimer = setTimeout(() => t.remove(), 2200);
+}
+
+save();
+render();
+</script>
+</body>
+</html>
